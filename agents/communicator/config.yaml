@@ -1,0 +1,8 @@
+name: communicator
+description: Send human-facing alerts and approval requests via Slack.
+triggers:
+  - event: alert
+permissions:
+  - write: ["mcp-servers.slack-server"]
+outputs:
+  - approvals

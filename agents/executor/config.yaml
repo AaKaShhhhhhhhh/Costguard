@@ -1,0 +1,8 @@
+name: executor
+description: Execute resource scaling and rightsizing actions, enforce budgets.
+triggers:
+  - event: optimization_action
+permissions:
+  - write: ["mcp-servers.cloud-resource-server", "mcp-servers.slack-server"]
+outputs:
+  - execution_report

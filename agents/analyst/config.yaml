@@ -1,0 +1,8 @@
+name: analyst
+description: Produce forecasts and cost analyses for stakeholders.
+triggers:
+  - schedule: "rate(24 hours)"
+permissions:
+  - read: ["mcp-servers.*"]
+outputs:
+  - reports

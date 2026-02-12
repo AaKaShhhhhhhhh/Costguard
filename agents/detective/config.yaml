@@ -1,0 +1,8 @@
+name: detective
+description: Detect cost anomalies across cloud providers and LLM usage.
+triggers:
+  - schedule: "rate(5 minutes)"
+permissions:
+  - read: ["mcp-servers.aws-cost-server", "mcp-servers.gcp-billing-server", "mcp-servers.azure-cost-server"]
+outputs:
+  - alert_queue

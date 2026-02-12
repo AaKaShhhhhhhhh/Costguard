@@ -1,0 +1,9 @@
+name: optimizer
+description: Route LLM requests to cost-effective models based on complexity.
+triggers:
+  - event: llm_request
+permissions:
+  - read: ["mcp-servers.llm-tracker-server"]
+  - write: ["mcp-servers.cloud-resource-server"]
+outputs:
+  - optimization_actions
