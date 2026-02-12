@@ -32,3 +32,9 @@ Testing guidance
 
 Coordination
 - If adding SDK deps (e.g., `google-cloud-bigquery`), update `pyproject.toml` in a single PR and notify Teams A and C.
+
+Agent coding (who implements what)
+- Team B owns the provider-facing agents that depend heavily on cloud billing/resource APIs:
+	- `detective`: anomaly detection using AWS/GCP/Azure cost data
+	- `executor`: applies scaling/rightsizing actions via cloud APIs
+- Team B should keep agent logic thin and reusable by calling `mcp-servers/*` adapters and returning structured results to the backend.
