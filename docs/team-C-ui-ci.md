@@ -1,76 +1,104 @@
-# Team C — UI, CI/CD & Archestra Integration Guide
+# Team C — UI, CI/CD & Dockerization (Simplified)
 
-This document outlines Team C responsibilities: Streamlit dashboard, GitHub Actions, docker-compose improvements, and Archestra.AI workflow deployment scripts.
+Purpose
+- Build the Streamlit dashboard, create Dockerfiles and `docker-compose` for local dev, and add CI workflows to run tests and build images. Team C owns all Docker work and CI pipelines.
 
-Summary
-- Owner: Team C
-- Scope: implement `ui/` Streamlit app, CI workflows under `.github/workflows`, add Dockerfiles and improve `docker-compose.yml` for dev, and provide Archestra.AI deployment scripts.
+See the detailed Docker workflow in [CHECKLIST_DOCKER.md](CHECKLIST_DOCKER.md).
 
-Primary tasks
+Deliverables (short)
+- `ui/` Streamlit app with pages: Overview, LLM Usage, Anomalies, Actions
+- Dockerfiles for `backend`, `mcp-servers/*` (as documented by Team B), and `ui`
+- `docker-compose.yml` updated for local development
+- GitHub Actions: `test.yml` (lint & tests) and `build.yml` (build/push images)
+- `scripts/deploy_archestra.sh` template to deploy workflows to Archestra.AI
 
-1. **Streamlit UI** (`ui/`):
-   - Create a multi-page Streamlit dashboard under `ui/pages/`:
-     - Overview: budgets, monthly spend, top services
-     - LLM usage: model distribution, token counts, cost per model
-     - Anomalies: list with approve/reject buttons (calls backend endpoints)
-     - Actions: pending optimization actions and status
-   - Reusable components in `ui/components/` and helpers in `ui/utils/`.
+Docker checklist (practical)
+- Use `python:3.10-slim` base and install only runtime deps.
+- Respect env vars from Team B/A; do not bake secrets into images.
+- Entrypoints:
+  - Backend: `uvicorn backend.api.main:app --host 0.0.0.0 --port 8000`
+  - LLM tracker: `uvicorn mcp_servers.llm_tracker_server.main:app --port 8001`
+  - UI: `streamlit run ui/dashboard.py --server.port 8501`
+- Use multi-stage builds and non-root user where possible.
 
-2. **GitHub Actions (CI)**:
-   - Create `.github/workflows/test.yml` that runs `pytest`, `ruff`, and `mypy`.
-   - Create `deploy.yml` that builds Docker images and (optionally) pushes to registry.
+CI basics
+- `test.yml`: checkout, setup python, install deps, run `ruff`, `mypy`, `pytest`.
+- `build.yml`: build Docker images and push to registry on tags or on `main` merges.
 
-Example `test.yml` job steps:
+Streamlit UI guidance (what to show)
+- Overview: monthly spend, budget, top services (charts)
+- LLM Usage: model distribution, token counts, costs per model
+- Anomalies: list with severity and a button that opens approval modal (calls backend)
+- Actions: pending optimization actions and status
 
-```yaml
-name: CI
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with: python-version: '3.10'
-      - name: Install deps
-        run: |
-          pip install -e .
-          pip install pytest ruff mypy
-      - name: Lint
-        run: ruff check .
-      - name: Test
-        run: pytest -q
+Coordination
+- Confirm API endpoints and JSON shapes with Team A before wiring UI actions.
+- Use Team B READMEs for env var names and runtime hints when building images.
+
+
+
+# Docker Workflow Checklist (Team C)
+
+This checklist contains the Docker workflow and in-container tasks for local development, CI, and production. Use it as the single source of truth for building, running, and debugging container images for the CostGuard AI project.
+
+## 1. Build & tag images
+- Local dev: build images with descriptive tags:
+
+```bash
+docker build -t costguard/backend:local -f docker/backend/Dockerfile .
+docker build -t costguard/llm-tracker:local -f mcp-servers/llm-tracker-server/Dockerfile .
+docker build -t costguard/ui:local -f ui/Dockerfile .
 ```
 
-3. **Docker & docker-compose (Team C owns all Docker work)**:
-  - Create Dockerfiles for `backend`, `mcp-servers/*` services (LLM tracker, AWS/GCP/Azure adapters), and the Streamlit UI.
-  - Build and publish images in CI (or provide local `docker-compose` builds for developers).
-  - Add service entries for `backend`, `llm-tracker-server`, and each MCP server in `docker-compose.yml` and maintain the compose dev setup.
-  - Provide a `Makefile` target (already present) to `docker-up` and `docker-down`.
+- CI: tag images as `registry/org/costguard/<service>:${{ github.sha }}` and push to your container registry.
 
-  Notes for Dockerfiles:
-  - Use multi-stage builds where helpful to keep images small.
-  - Install only runtime dependencies in final image and avoid embedding secrets.
-  - Respect `PYTHONUNBUFFERED=1` and use a non-root user where possible.
+## 2. docker-compose for local development
+- Compose orchestrates services (Postgres, Prometheus, Grafana, backend, tracker, UI).
+- Keep secrets out of `docker-compose.yml`; pass env via `.env` or `docker-compose.override.yml` (ignored by git).
 
-4. **Archestra.AI integration**:
-   - Create `scripts/deploy_archestra.sh` to register workflows and deploy agent code if Archestra provides an API/CLI.
-   - Provide sample Archestra workflow manifests in `workflows/` (already present) and document how to upload them.
+Example compose snippet for the backend service:
 
-5. **End-to-end demo script**:
-   - Create `scripts/demo.sh` to start services, seed demo data, start agent runner in demo mode, and open Streamlit.
+```yaml
+services:
+  backend:
+    image: costguard/backend:local
+    ports: ["8000:8000"]
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - ENVIRONMENT=development
+    depends_on: [postgres]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+```
 
+## 3. In-container startup tasks
+- **DB migrations**: On startup, the backend container should run `alembic upgrade head` (or a controlled migration job) before starting the app. For local dev you can run migrations from the host instead.
+- **Seeding**: Optionally seed the DB with demo data in a CI/dev-only path.
+- **Health checks**: Expose a `/health` endpoint for readiness and liveness checks used by compose or k8s.
+- **Logging**: stdout/stderr should stream structured logs (Loguru config present). Do not write secrets to logs.
 
-Deliverables
+## 4. CI pipeline steps around Docker
+- **Build**: Build images for each service with stable tags.
+- **Test**: Run unit tests in the CI environment (preferably in a `test` image or via a matrix job). Avoid depending on external cloud services by mocking.
+- **Push**: Push images to a registry when the build is from `main` or `release` tags.
+- **Deploy**: Optional step to deploy images to staging/production (or call Archestra.AI deploy scripts).
 
-- `ui/` Streamlit app with at least two pages (Overview, Anomalies).
-- `.github/workflows/test.yml` and `deploy.yml` for CI.
-- Dockerfiles for `backend` and MCP servers plus updated `docker-compose.yml` usable for local development.
-- `scripts/deploy_archestra.sh` template and instructions.
+## 5. Secrets & configuration
+- For local dev use `.env` and `docker-compose` env interpolation.
+- For CI and production use GitHub Secrets, Docker secrets, or a secrets manager (AWS Secrets Manager, GCP Secret Manager).
 
+## 6. Resource hints & production readiness
+- Add resource limits in compose/k8s manifests (e.g., `mem_limit: "512m"`).
+- Use multi-stage builds to reduce image size and attack surface.
 
-Coordination notes
+## 7. Debugging & logs
+- To debug: `docker-compose up --build` then `docker logs -f <service>` or `docker-compose exec backend /bin/bash`.
+- Provide a `make logs` target to tail service logs locally.
 
-- UI will call backend endpoints (owned by Team A). Agree on endpoint paths and JSON shapes early.
-- CI changes that affect deps must be coordinated with Team B if provider SDKs are added.
+## 8. Pre-build questions for Team B/A
+- Exact env var names and example values (Team B/A should provide READMEs).
+- Ports the service listens on and any additional system requirements (e.g., Google Cloud SDK or system libraries).
+- Any one-off setup commands (DB migrations, seeding) that must run in container startup.
