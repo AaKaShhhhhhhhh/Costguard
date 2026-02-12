@@ -1,0 +1,16 @@
+name: optimization
+description: Workflow to optimize LLM routing and suggest actions.
+steps:
+  - id: analyze-usage
+    action: call
+    target: mcp-servers.llm-tracker-server.main:list_usage
+    args:
+      - limit: 500
+
+  - id: suggest-optimizations
+    action: run_agent
+    agent: optimizer
+
+  - id: apply-optimizations
+    action: run_agent
+    agent: executor

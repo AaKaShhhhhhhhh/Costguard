@@ -1,0 +1,18 @@
+name: approval-flow
+description: Human approval flow for high-risk optimizations.
+steps:
+  - id: propose-change
+    action: run_agent
+    agent: optimizer
+
+  - id: request-approval
+    action: run_agent
+    agent: communicator
+
+  - id: wait-approval
+    action: wait_for_human
+    timeout: 86400
+
+  - id: execute-change
+    action: run_agent
+    agent: executor

@@ -36,17 +36,15 @@ async def fetch_costs(start: str, end: str) -> Dict[str, float]:
         logger.exception("boto3 is required for AWS Cost Explorer integration")
         raise RuntimeError("boto3 is required for AWS integration") from exc
 
-    if not settings.aws_access_key_id or not settings.aws_secret_access_key:
-        raise RuntimeError("AWS credentials are not configured in environment")
+    # Use a boto3 session which will resolve credentials using env/role
+    session = boto3.Session(
+        aws_access_key_id=settings.aws_access_key_id,
+        aws_secret_access_key=settings.aws_secret_access_key,
+        region_name=settings.aws_region,
+    )
 
-    # Run blocking boto3 call in threadpool
     def _call_ce() -> Dict[str, float]:
-        client = boto3.client(
-            "ce",
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key,
-            region_name=settings.aws_region,
-        )
+        client = session.client("ce")
         try:
             response = client.get_cost_and_usage(
                 TimePeriod={"Start": start, "End": end},
@@ -57,11 +55,9 @@ async def fetch_costs(start: str, end: str) -> Dict[str, float]:
             logger.exception("AWS Cost Explorer API call failed")
             raise RuntimeError("AWS Cost Explorer API call failed") from exc
 
-        # Aggregate total
+        # Aggregate total across the period
         total = 0.0
         for res in response.get("ResultsByTime", []):
-            for group in res.get("Groups", []) or []:
-                pass
             amount = res.get("Total", {}).get("UnblendedCost", {}).get("Amount")
             try:
                 total += float(amount or 0.0)

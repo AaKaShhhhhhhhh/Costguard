@@ -1,0 +1,17 @@
+name: cost-monitoring
+description: Periodic cost ingestion and anomaly detection workflow.
+steps:
+  - id: ingest-costs
+    action: call
+    target: mcp-servers.aws-cost-server.fetch_costs
+    args:
+      - start: "{{workflow.start_prev}}"
+      - end: "{{workflow.end_curr}}"
+
+  - id: detect-anomalies
+    action: run_agent
+    agent: detective
+
+  - id: notify
+    action: run_agent
+    agent: communicator
