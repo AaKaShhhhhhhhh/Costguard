@@ -5,11 +5,8 @@ configuration from environment variables and an optional `.env` file.
 
 The object `settings` is instantiated at import-time. Import carefully to
 avoid circular imports in applications that configure logging based on
-settings.
 """
-from typing import Optional
-from pydantic_settings import BaseSettings
-
+print("DEBUG: Loading shared/config.py VERSION 3")
 
 class Settings(BaseSettings):
     """Application settings loaded from environment.
@@ -19,29 +16,29 @@ class Settings(BaseSettings):
     """
 
     # Cloud Providers
-    aws_access_key_id: Optional[str]
-    aws_secret_access_key: Optional[str]
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
     aws_region: str = "us-east-1"
 
-    gcp_project_id: Optional[str] = None
-    gcp_credentials_path: Optional[str] = None
+    gcp_project_id: str | None = None
+    gcp_credentials_path: str | None = None
 
-    azure_subscription_id: Optional[str] = None
-    azure_client_id: Optional[str] = None
-    azure_client_secret: Optional[str] = None
-    azure_tenant_id: Optional[str] = None
+    azure_subscription_id: str | None = None
+    azure_client_id: str | None = None
+    azure_client_secret: str | None = None
+    azure_tenant_id: str | None = None
 
     # LLM APIs
-    openai_api_key: Optional[str]
-    anthropic_api_key: Optional[str]
+    openai_api_key: str | None = None
+    anthropic_api_key: str | None = None
 
     # Slack
-    slack_bot_token: Optional[str]
+    slack_bot_token: str | None = None
     slack_channel_alerts: str = "#cost-alerts"
     slack_channel_approvals: str = "#cost-approvals"
 
     # Archestra.AI
-    archestra_api_key: Optional[str]
+    archestra_api_key: str | None = None
     archestra_api_url: str = "https://api.archestra.ai"
 
     # Database

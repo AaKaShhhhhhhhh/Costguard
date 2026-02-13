@@ -95,12 +95,13 @@ See `Makefile` for common commands. Use `scripts/setup.sh` for automated setup o
 - Trigger a cost scan via API: `POST /api/v1/monitor/scan`
 - View LLM usage: `GET /api/v1/llm/usage?range=7d`
 
-## Demo Workflow
+## Simple Workflow
 
-1. MCP `llm-tracker-server` collects usage.
-2. `detective` agent flags anomalies.
-3. `optimizer` suggests model switches.
-4. `executor` applies scaling changes (with approval if required).
+1.  **Configure**: Create your `.env` file from the example.
+2.  **Start**: Run `docker-compose up --build`.
+3.  **Dashboard**: Open `http://localhost:8501` to view your cloud costs.
+4.  **API**: Open `http://localhost:8000/docs` to interact with the backend (Auth: `default_secret_key`).
+5.  **Agents**: Background MCP agents will automatically populate anomalies over time.
 
 ## API Documentation
 

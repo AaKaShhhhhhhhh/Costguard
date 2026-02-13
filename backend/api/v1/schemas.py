@@ -64,3 +64,11 @@ class OptimizationActionCreate(OptimizationActionBase):
 class OptimizationAction(OptimizationActionBase):
     class Config:
         from_attributes = True
+
+# --- Cost Summary Schemas ---
+
+class CostSummary(BaseModel):
+    current_month_cost: float
+    delta_percent: str
+    top_services: List[Dict[str, Any]]
+
