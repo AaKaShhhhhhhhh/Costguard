@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -11,6 +9,68 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - costguard-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U costguard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    container_name: costguard-backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://costguard:dev-password@postgres:5432/costguard
+      - ENVIRONMENT=development
+      - API_KEY=default_secret_key
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app/backend
+      - ./shared:/app/shared
+    networks:
+      - costguard-network
+
+  llm-tracker:
+    build:
+      context: .
+      dockerfile: mcp-servers/llm-tracker-server/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./mcp-servers/llm-tracker-server:/app/mcp-servers/llm-tracker-server
+      - ./shared:/app/shared
+    networks:
+      - costguard-network
+
+  ui:
+    container_name: costguard-ui
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_URL=http://costguard-backend:8000
+      - API_KEY=default_secret_key
+    depends_on:
+      - backend
+    links:
+      - backend:costguard-backend
+    volumes:
+      - ./ui:/app
+    networks:
+      - costguard-network
 
   prometheus:
     image: prom/prometheus:latest
@@ -21,6 +81,8 @@ services:
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - costguard-network
 
   grafana:
     image: grafana/grafana:latest
@@ -33,6 +95,12 @@ services:
       - ./monitoring/grafana-dashboards:/etc/grafana/provisioning/dashboards
     depends_on:
       - prometheus
+    networks:
+      - costguard-network
+
+networks:
+  costguard-network:
+    driver: bridge
 
 volumes:
   postgres_data:
