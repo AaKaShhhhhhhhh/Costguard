@@ -1,12 +1,14 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database.base import get_db
 from backend.services import repositories, integration
+from backend.services.slack import slack_service
 from datetime import datetime, timedelta
 import uuid
 from backend.models.models import CostAnomaly
 from backend.api.v1 import schemas
+from shared.config import settings
 
 router = APIRouter()
 
@@ -23,11 +25,11 @@ async def list_usage(skip: int = 0, limit: int = 100, db: AsyncSession = Depends
 # --- Cost Anomaly Endpoints ---
 
 @router.post("/anomalies", response_model=schemas.CostAnomaly, status_code=status.HTTP_201_CREATED)
-async def create_anomaly(anomaly: schemas.CostAnomalyCreate, db: AsyncSession = Depends(get_db)):
+async def create_anomaly(anomaly: schemas.CostAnomalyCreate, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     db_anomaly = await repositories.create_anomaly(db, anomaly.dict())
     
-    # Simulate Team C Notification requirement
-    print(f"ALARM: Slack notification sent to #cost-alerts: New {db_anomaly.severity} anomaly detected on {db_anomaly.service}")
+    # Trigger Slack notification in background
+    background_tasks.add_task(slack_service.notify_anomaly, db_anomaly.__dict__)
     
     return db_anomaly
 
@@ -38,8 +40,13 @@ async def list_anomalies(skip: int = 0, limit: int = 100, db: AsyncSession = Dep
 # --- Optimization Action Endpoints ---
 
 @router.post("/actions", response_model=schemas.OptimizationAction, status_code=status.HTTP_201_CREATED)
-async def create_action(action: schemas.OptimizationActionCreate, db: AsyncSession = Depends(get_db)):
-    return await repositories.create_action(db, action.dict())
+async def create_action(action: schemas.OptimizationActionCreate, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    db_action = await repositories.create_action(db, action.dict())
+    
+    # Trigger Slack notification in background
+    background_tasks.add_task(slack_service.notify_action, db_action.__dict__)
+    
+    return db_action
 
 @router.post("/actions/{id}/approve", response_model=schemas.OptimizationAction)
 async def approve_action(id: str, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
@@ -115,3 +122,48 @@ async def seed_data(db: AsyncSession = Depends(get_db)):
     db.add_all([a1, a2])
     await db.commit()
     return {"message": "Seeded 2 anomalies successfully"}
+
+@router.post("/slack/interactive")
+async def slack_interactive(
+    background_tasks: BackgroundTasks,
+    payload: str = Form(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """Handle interactive components from Slack (e.g., buttons)."""
+    import json
+    try:
+        data = json.loads(payload)
+        actions = data.get("actions", [])
+        if not actions:
+            return {"ok": True}
+        
+        action = actions[0]
+        action_id = action.get("action_id")
+        db_action_id = action.get("value")
+        
+        if action_id == "approve_action":
+            await repositories.approve_action(db, db_action_id)
+            # Notify Team B (MCO Agents) to start work
+            background_tasks.add_task(integration.notify_archestra, db_action_id, "approved", approver_id="slack_user")
+            print(f"DEBUG: Action {db_action_id} approved via Slack - Notifying Team B")
+        elif action_id == "deny_action":
+            await repositories.deny_action(db, db_action_id)
+            # Notify Team B that work was rejected
+            background_tasks.add_task(integration.notify_archestra, db_action_id, "denied", approver_id="slack_user")
+            print(f"DEBUG: Action {db_action_id} denied via Slack - Notifying Team B")
+            
+        return {"ok": True}
+    except Exception as e:
+        print(f"ERROR: Slack interactive failed: {e}")
+        return {"ok": False, "error": str(e)}
+
+@router.post("/debug/slack")
+async def debug_slack(message: str = "Test message from CostGuard", db: AsyncSession = Depends(get_db)):
+    """Manually trigger a test notification to Slack."""
+    success = await slack_service.send_message(settings.slack_channel_alerts, message)
+    return {
+        "success": success, 
+        "webhook_configured": bool(settings.slack_webhook_url),
+        "token_configured": bool(settings.slack_bot_token and "your" not in settings.slack_bot_token),
+        "message": "Check backend logs for details if success is false"
+    }
