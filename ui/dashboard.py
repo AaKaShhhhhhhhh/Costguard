@@ -103,9 +103,12 @@ elif page == "Anomalies":
     st.title("Anomalies")
     data = safe_get("/api/v1/anomalies")
     
-    if data:
+    if data is not None:
         # Assuming data is a list of anomalies or dict with 'items'
         items = data if isinstance(data, list) else data.get("items", [])
+        
+        if not items:
+            st.info("No anomalies found in the database.")
         
         for a in items:
             with st.container():

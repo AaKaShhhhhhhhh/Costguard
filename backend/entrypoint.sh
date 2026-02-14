@@ -1,9 +1,10 @@
 #!/bin/bash
 set -e
+set -x
 
 # Run migrations
 echo "Running migrations..."
-alembic -c backend/alembic.ini upgrade head
+python -m alembic -c backend/alembic.ini upgrade head
 
 echo "Seeding data (if empty)..."
 python backend/seed_db.py
