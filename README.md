@@ -1,131 +1,69 @@
 # CostGuard AI
 
-Autonomous cloud resource and AI model cost optimization platform.
+CostGuard AI is an autonomous cloud resource and AI model cost optimization platform. It utilizes Model Context Protocol (MCP) based agents to continuously monitor cloud spending and LLM usage, identify optimization opportunities, and facilitate autonomous resource allocation adjustments.
 
 ## Project Overview
 
-CostGuard AI deploys MCP-based agents that continuously monitor cloud spending and LLM usage, identify optimization opportunities, and autonomously adjust resource allocation. Agents use Archestra.AI for orchestration and decision-making, with safety limits to prevent runaway spending.
+The platform deploys intelligent agents that interface with cloud provider billing APIs and LLM usage logs. These agents analyze cost data against historical baselines to detect anomalies. When an optimization opportunity or cost spike is identified, the system orchestrates a response through Archestra.AI, allowing for automated remediation with optional human-in-the-loop approval workflows.
 
-## Problem Statement
-
-Cloud and LLM usage costs are increasingly complex and opaque. Teams need automated tooling to detect anomalies, route LLM queries to cost-appropriate models, and scale resources efficiently.
-
-## Solution Overview
-
-CostGuard AI provides:
-- Continuous cost monitoring across AWS, GCP, and Azure
-- LLM usage tracking and intelligent model switching
-- Automated optimization and resource scaling with human approval flows
-- Dashboards for real-time visibility
+NOTE: Project was made with the help of Antigravity AI tools.
 
 ## Key Features
 
-- Cost monitoring & anomaly detection
-- LLM request routing & model optimization
-- Auto-scaling and rightsizing for cloud resources
-- Approval workflows and Slack notifications
-- Prometheus + Grafana monitoring
-
-## Tech Stack
-
-- Python 3.10+
-- FastAPI
-- Streamlit
-- MCP (Model Context Protocol)
-- Archestra.AI
-- Docker / docker-compose
-- Prometheus + Grafana
+- **Automated Anomaly Detection**: Implementation of rolling-average baseline analysis to detect significant cost deviations in real-time.
+- **LLM Usage Analytics**: Granular tracking of token usage, model latency, and quality scores across multiple providers (OpenAI, Anthropic).
+- **Intelligent Resource Optimization**: Automated recommendation and execution of cost-saving measures, such as switching to cost-efficient models or scaling down underutilized cloud resources.
+- **Integrated Communication Bridge**: An A2A (Agent-to-Agent) communication layer that facilitates seamless interaction between the CostGuard backend and Archestra.AI orchestration agents.
+- **Unified Dashboard**: A comprehensive Streamlit-based interface providing real-time visualization of cost trends, provider breakdowns, and active optimization states.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-  subgraph Cloud
-    A[AWS/GCP/Azure Cost APIs]
-  end
-  subgraph MCP
-    B[MCP Servers] --> C[Agents]
-  end
-  subgraph Orchestration
-    D[Archestra.AI]
-  end
-  subgraph Backend
-    E[FastAPI]
-    F[Database]
-  end
-  subgraph UI
-    G[Streamlit Dashboard]
-  end
+CostGuard AI follows a modular architecture designed for scalability and reliability.
 
-  A --> B
-  B --> D
-  D --> C
-  C --> E
-  E --> F
-  E --> G
-  C -->|Alerts| Slack
-```
+### System Flow
+1. **Data Ingestion**: Cloud and LLM usage data are collected via backend repositories.
+2. **Analysis**: The Detective Agent compares current metrics against historical 7-day averages.
+3. **Orchestration**: Identified anomalies trigger optimization workflows via the Archestra.AI A2A bridge.
+4. **Execution**: The Executor Agent implements approved changes, providing instantaneous feedback via the integrated dashboard chat.
 
-## Quick Start
+## Tech Stack
 
-1. Copy `.env.example` to `.env` and populate keys.
-2. Create virtualenv and install dependencies:
+- **Backend**: Python 3.10+, FastAPI, SQLAlchemy
+- **Frontend**: Streamlit
+- **Protocols**: Model Context Protocol (MCP), JSON-RPC 2.0
+- **Database**: PostgreSQL
+- **Orchestration**: Archestra.AI
+- **Infrastructure**: Docker, Docker Compose
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-```
+## Getting Started
 
-3. Start development services:
+### Prerequisites
+- Docker and Docker Compose
+- Python 3.10 or higher
+- Access keys for OpenAI, Anthropic, or Archestra.AI (depending on configuration)
 
-```bash
-make docker-up
-make dev
-```
+### Local Setup
+1. Clone the repository and navigate to the project root.
+2. Initialize the environment configuration:
+   ```bash
+   cp .env.example .env
+   ```
+3. Populate the required API keys in the `.env` file.
+4. Launch the platform using Docker Compose:
+   ```bash
+   docker-compose up --build
+   ```
+5. Access the Dashboard at `http://localhost:8501`.
+6. Access the API Documentation at `http://localhost:8000/docs`.
 
-4. Open dashboard at `http://localhost:8501` and API at `http://localhost:8000`.
+## Deployment
 
-## Installation
-
-See `Makefile` for common commands. Use `scripts/setup.sh` for automated setup on Unix, or `scripts/setup.bat` on Windows.
-
-## Usage Examples
-
-- Trigger a cost scan via API: `POST /api/v1/monitor/scan`
-- View LLM usage: `GET /api/v1/llm/usage?range=7d`
-
-## Simple Workflow
-
-1.  **Configure**: Create your `.env` file from the example.
-2.  **Start**: Run `docker-compose up --build`.
-3.  **Dashboard**: Open `http://localhost:8501` to view your cloud costs.
-4.  **API**: Open `http://localhost:8000/docs` to interact with the backend (Auth: `default_secret_key`).
-5.  **Agents**: Background MCP agents will automatically populate anomalies over time.
+The platform is designed for containerized deployment. For production environments, it is recommended to utilize orchestration services like Railway or AWS ECS. Detailed deployment instructions can be found in the `deployment_guide.md` file.
 
 ## API Documentation
 
-Auto-generated OpenAPI under `/docs` when the backend is running.
+The backend service provides an interactive OpenAPI (Swagger) documentation available at the `/docs` endpoint. This documentation includes detailed schema definitions and request/response examples for all cost monitoring and agent control endpoints.
 
-## Contributing
 
-Please open issues and pull requests. Follow code style (Black, Ruff) and run tests.
 
-## Team
 
-- Your Name - Lead
-
-## License
-
-MIT
-
-## Hackathon
-
-WeMakeDevs - 2 Fast 2 MCP
-
-## Badges
-
-- Python: ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-- License: ![License](https://img.shields.io/badge/license-MIT-green)
-- Build: ![Build](https://img.shields.io/badge/build-passing-brightgreen)
-- Coverage: ![Coverage](https://img.shields.io/badge/coverage-0%25-red)
