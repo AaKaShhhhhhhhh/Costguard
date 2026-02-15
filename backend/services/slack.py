@@ -132,27 +132,18 @@ class SlackService:
                 }
             },
             {
-                "type": "actions",
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Resolution Plan:*\n1. Switch model to `gpt-4o-mini` (Cost reduced by ~95%)\n2. Implement caching for repeated prompts\n3. Notify team via Archestra workflow\n\n👉 *Action Required: Please approve this action on the CostGuard Dashboard.*"
+                }
+            },
+            {
+                "type": "context",
                 "elements": [
                     {
-                        "type": "button",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "✅ Approve"
-                        },
-                        "style": "primary",
-                        "action_id": "approve_action",
-                        "value": str(action.get("id"))
-                    },
-                    {
-                        "type": "button",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "❌ Deny"
-                        },
-                        "style": "danger",
-                        "action_id": "deny_action",
-                        "value": str(action.get("id"))
+                        "type": "mrkdwn",
+                        "text": "🔒 *Security Note:* Interactive buttons are disabled for security in this environment. Please use the secure dashboard."
                     }
                 ]
             }

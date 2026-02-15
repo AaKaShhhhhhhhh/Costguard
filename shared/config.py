@@ -34,6 +34,8 @@ class Settings(BaseSettings):
 
     # Archestra.AI
     archestra_api_key: Optional[str] = None
+    archestra_mcp_token: Optional[str] = None
+    archestra_team_token: Optional[str] = None
     archestra_api_url: str = "https://api.archestra.ai"
 
     # Database
