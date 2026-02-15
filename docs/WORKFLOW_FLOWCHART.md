@@ -14,12 +14,13 @@ flowchart TD
     F --> G[6. Verify & Log]
 
     subgraph Status [Project Readiness]
-        B -.-> B_S[Team B: Skeletons Done, Logic Remaining]
+        B -.-> B_S[Team B: DONE — Agent logic + MCP integrations]
         C -.-> C_S[Team A: DONE]
-        D -.-> D_S[Team B: Logic Remaining]
+        D -.-> D_S[Team B: DONE — Detective agent anomaly detection]
         E -.-> E_S[Team C: Dashboard Done, Slack Pending]
-        F -.-> F_S[Team B: Execution Logic Remaining]
+        F -.-> F_S[Team B: DONE — Executor agent + Archestra integration]
     end
+
 ```
 
 ## Step-by-Step Breakdown

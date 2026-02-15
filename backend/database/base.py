@@ -10,12 +10,15 @@ engine = create_async_engine(DATABASE_URL, future=True, echo=True)
 
 # AsyncSessionLocal factory
 AsyncSessionLocal = sessionmaker(
-    engine, 
-    class_=AsyncSession, 
+    engine,
+    class_=AsyncSession,
     expire_on_commit=False,
     autocommit=False,
     autoflush=False
 )
+
+# Alias for background tasks that need their own session
+async_session_factory = AsyncSessionLocal
 
 # Declarative Base
 Base = declarative_base()
@@ -26,3 +29,4 @@ async def get_db():
             yield session
         finally:
             await session.close()
+
