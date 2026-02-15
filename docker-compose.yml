@@ -36,6 +36,11 @@ services:
     volumes:
       - ./backend:/app/backend
       - ./shared:/app/shared
+      - ./scripts:/app/scripts
+      - ./workflows:/app/workflows
+      - ./agents:/app/agents
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - costguard-network
 
@@ -73,34 +78,36 @@ services:
       - backend:costguard-backend
     volumes:
       - ./ui:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - costguard-network
 
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-    networks:
-      - costguard-network
-
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana-dashboards:/etc/grafana/provisioning/dashboards
-    depends_on:
-      - prometheus
-    networks:
-      - costguard-network
+#   prometheus:
+#     image: prom/prometheus:latest
+#     ports:
+#       - "9090:9090"
+#     volumes:
+#       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+#       - prometheus_data:/prometheus
+#     command:
+#       - '--config.file=/etc/prometheus/prometheus.yml'
+#     networks:
+#       - costguard-network
+#
+#   grafana:
+#     image: grafana/grafana:latest
+#     ports:
+#       - "3000:3000"
+#     environment:
+#       GF_SECURITY_ADMIN_PASSWORD: admin
+#     volumes:
+#       - grafana_data:/var/lib/grafana
+#       - ./monitoring/grafana-dashboards:/etc/grafana/provisioning/dashboards
+#     depends_on:
+#       - prometheus
+#     networks:
+#       - costguard-network
 
 networks:
   costguard-network:
